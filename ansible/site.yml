@@ -1,0 +1,54 @@
+---
+- name: Configurar nodos base para k3s
+  hosts: k3s_nodes
+  become: true
+
+  tasks:
+    - name: Actualizar caché de paquetes
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Actualizar todos los paquetes del sistema
+      apt:
+        upgrade: dist
+
+    - name: Instalar dependencias necesarias para k3s
+      apt:
+        name:
+          - curl
+          - open-iscsi
+          - apt-transport-https
+          - ca-certificates
+        state: present
+
+    - name: Asegurar que open-iscsi está activo (requerido por k3s para volúmenes)
+      systemd:
+        name: iscsid
+        state: started
+        enabled: true
+
+    - name: Instalar ufw (firewall)
+      apt:
+        name: ufw
+        state: present
+
+    - name: Permitir tráfico desde la interfaz de Tailscale
+      community.general.ufw:
+        rule: allow
+        interface: tailscale0
+        direction: in
+
+    - name: Denegar el resto de tráfico entrante por defecto
+      community.general.ufw:
+        default: deny
+        direction: incoming
+
+    - name: Permitir todo el tráfico saliente por defecto
+      community.general.ufw:
+        default: allow
+        direction: outgoing
+
+    - name: Activar ufw
+      community.general.ufw:
+        state: enabled

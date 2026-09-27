@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo
+  namespace: odoo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odoo
+  template:
+    metadata:
+      labels:
+        app: odoo
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: control-plane
+      containers:
+      - name: odoo
+        image: odoo:19
+        env:
+        - name: HOST
+          value: "odoo-postgres"
+        - name: USER
+          value: "odoo"
+        - name: PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: odoo-secrets
+              key: postgres-password
+        ports:
+        - containerPort: 8069
+        volumeMounts:
+        - name: filestore
+          mountPath: /var/lib/odoo
+        - name: config
+          mountPath: /etc/odoo/odoo.conf
+          subPath: odoo.conf
+        - name: addons
+          mountPath: /mnt/extra-addons
+        resources:
+          requests:
+            cpu: 200m
+            memory: 1Gi
+          limits:
+            memory: 3Gi
+      volumes:
+      - name: filestore
+        persistentVolumeClaim:
+          claimName: odoo-filestore
+      - name: config
+        secret:
+          secretName: odoo-config
+      - name: addons
+        persistentVolumeClaim:
+          claimName: odoo-addons
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: odoo
+  namespace: odoo
+spec:
+  selector:
+    app: odoo
+  ports:
+  - port: 8069
+    targetPort: 8069

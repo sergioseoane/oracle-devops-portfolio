@@ -1,0 +1,18 @@
+terraform {
+  backend "s3" {
+    bucket = "terraform-state-oracle-devops"
+    key    = "terraform.tfstate"
+    region = "eu-madrid-1"
+
+    endpoints = {
+      s3 = "https://<tu-namespace-de-object-storage>.compat.objectstorage.eu-madrid-1.oraclecloud.com"
+    }
+
+    skip_region_validation      = true
+    skip_credentials_validation = true
+    skip_metadata_api_check     = true
+    skip_requesting_account_id  = true
+    skip_s3_checksum             = true
+    use_path_style                = true
+  }
+}

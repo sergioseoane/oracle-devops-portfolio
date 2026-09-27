@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: riddim
+  namespace: riddim
+spec:
+  selector:
+    app: riddim
+  ports:
+  - port: 3000
+    targetPort: 3000

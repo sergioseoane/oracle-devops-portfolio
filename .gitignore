@@ -1,0 +1,17 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.auto.tfvars
+backend.tf
+
+# Ansible
+inventory/hosts.yml
+
+# Claves y secretos
+*.pem
+.env
+ansible/inventory/hosts.yml
+audit.sh

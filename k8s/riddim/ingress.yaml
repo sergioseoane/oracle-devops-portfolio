@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: riddim
+  namespace: riddim
+spec:
+  rules:
+  - host: riddim.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: riddim
+            port:
+              number: 3000

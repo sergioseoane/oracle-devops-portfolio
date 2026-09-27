@@ -1,0 +1,41 @@
+---
+- name: Configurar memoria de intercambio (swap)
+  hosts: k3s_nodes
+  become: true
+
+  tasks:
+    - name: Comprobar si ya existe un archivo de swap
+      stat:
+        path: /swapfile
+      register: swap_file
+
+    - name: Crear el archivo de swap de 4GB
+      command: fallocate -l 4G /swapfile
+      when: not swap_file.stat.exists
+
+    - name: Restringir permisos del archivo de swap
+      file:
+        path: /swapfile
+        mode: '0600'
+      when: not swap_file.stat.exists
+
+    - name: Formatear el archivo como swap
+      command: mkswap /swapfile
+      when: not swap_file.stat.exists
+
+    - name: Activar el swap
+      command: swapon /swapfile
+      when: not swap_file.stat.exists
+
+    - name: Hacerlo persistente tras reinicios
+      lineinfile:
+        path: /etc/fstab
+        line: '/swapfile none swap sw 0 0'
+        state: present
+
+    - name: Ajustar swappiness (usar swap solo cuando de verdad haga falta)
+      sysctl:
+        name: vm.swappiness
+        value: '10'
+        state: present
+        sysctl_set: true

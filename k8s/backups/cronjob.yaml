@@ -1,0 +1,57 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-git-repos
+  namespace: backups
+spec:
+  schedule: "0 3 */3 * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: backup
+            image: alpine:3.20
+            env:
+            - name: GITEA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: backup-credentials
+                  key: GITEA_TOKEN
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: backup-credentials
+                  key: S3_ACCESS_KEY
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backup-credentials
+                  key: S3_SECRET_KEY
+            - name: AWS_REQUEST_CHECKSUM_CALCULATION
+              value: "when_required"
+            - name: AWS_RESPONSE_CHECKSUM_VALIDATION
+              value: "when_required"
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              apk update
+              apk add --no-cache ca-certificates git aws-cli tar
+              update-ca-certificates
+              FECHA=$(date +%Y%m%d-%H%M%S)
+              mkdir -p /tmp/backup && cd /tmp/backup
+
+              for REPO in tasema riddim riddim-deploy; do
+                git clone --mirror "http://sergio:${GITEA_TOKEN}@gitea-http.gitea.svc.cluster.local:3000/sergio/${REPO}.git" "${REPO}.git"
+                tar -czf "${REPO}-${FECHA}.tar.gz" "${REPO}.git"
+              done
+
+              for FILE in *.tar.gz; do
+                aws s3 cp "$FILE" "s3://terraform-state-oracle-devops/backups-git/$FILE" \
+                  --endpoint-url https://axa1zum1o2t3.compat.objectstorage.eu-madrid-1.oraclecloud.com
+              done
+
+              echo "Backup completado: $FECHA"

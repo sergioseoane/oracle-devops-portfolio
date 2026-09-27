@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: riddim
+  namespace: riddim
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: riddim
+  template:
+    metadata:
+      labels:
+        app: riddim
+    spec:
+      nodeName: worker
+      containers:
+      - name: riddim
+        image: riddim:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: riddim-secrets
+              key: JWT_SECRET
+        volumeMounts:
+        - name: music
+          mountPath: /app/music-files
+        - name: db
+          mountPath: /app/data
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+      volumes:
+      - name: music
+        hostPath:
+          path: /mnt/riddim-music
+          type: Directory
+      - name: db
+        hostPath:
+          path: /home/ubuntu/riddim/data
+          type: Directory
